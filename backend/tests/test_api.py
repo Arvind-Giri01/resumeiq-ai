@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import io
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
+from google.genai import errors
 from reportlab.pdfgen import canvas
 
 import main
 from models import AnalysisResult
+from services import gemini_service
 from services.gemini_service import _response_schema
 
 
@@ -26,6 +29,44 @@ def test_gemini_schema_omits_unsupported_additional_properties() -> None:
                 assert_supported(child)
 
     assert_supported(schema)
+
+
+def test_gemini_falls_back_when_primary_model_is_unavailable(monkeypatch) -> None:
+    calls: list[str] = []
+    parsed_result = {
+        "ats_score": 78,
+        "score_breakdown": {"formatting": 20, "keywords": 18, "experience": 21, "skills": 19},
+        "missing_keywords": ["AWS"],
+        "strengths": ["Quantified impact", "Relevant API experience", "Clear ownership"],
+        "improvements": ["Add scale", "Name cloud services", "Clarify scope", "Use consistent dates"],
+        "jd_match_percentage": 72,
+        "jd_gap_analysis": ["No AWS evidence"],
+        "interview_questions": ["Question one?", "Question two?", "Question three?", "Question four?"],
+    }
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            calls.append(kwargs["model"])
+            if len(calls) == 1:
+                raise errors.ServerError(503, {"error": {"message": "high demand"}})
+            return SimpleNamespace(parsed=parsed_result, text="")
+
+    class FakeClient:
+        models = FakeModels()
+
+    settings = SimpleNamespace(
+        gemini_api_key="test-key",
+        gemini_model="gemini-3.7-flash",
+        gemini_fallback_model="gemini-3.6-flash",
+        gemini_timeout_ms=45_000,
+    )
+    monkeypatch.setattr(gemini_service, "get_settings", lambda: settings)
+    monkeypatch.setattr(gemini_service.genai, "Client", lambda **kwargs: FakeClient())
+
+    result = gemini_service._generate("Experienced Python engineer. " * 12, "Build reliable APIs.")
+
+    assert calls == ["gemini-3.7-flash", "gemini-3.6-flash"]
+    assert result.ats_score == 78
 
 
 def make_pdf(text: str) -> bytes:

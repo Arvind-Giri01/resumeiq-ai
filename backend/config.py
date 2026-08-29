@@ -14,6 +14,7 @@ load_dotenv()
 class Settings:
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "").strip()
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.7-flash").strip()
+    gemini_fallback_model: str = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.6-flash").strip()
     gemini_timeout_ms: int = int(os.getenv("GEMINI_TIMEOUT_MS", "45000"))
     cors_origins_raw: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173")
     rate_limit: str = os.getenv("ANALYZE_RATE_LIMIT", "5/minute")

@@ -91,17 +91,14 @@ def _response_schema() -> dict:
     return schema
 
 
-def _generate(resume_text: str, job_description: str | None) -> AnalysisResult:
-    settings = get_settings()
-    if not settings.gemini_api_key:
-        raise GeminiConfigurationError("Gemini is not configured. Add GEMINI_API_KEY to the backend environment.")
-
-    client = genai.Client(
-        api_key=settings.gemini_api_key,
-        http_options=types.HttpOptions(timeout=settings.gemini_timeout_ms),
-    )
+def _generate_with_model(
+    client: genai.Client,
+    model: str,
+    resume_text: str,
+    job_description: str | None,
+) -> AnalysisResult:
     response = client.models.generate_content(
-        model=settings.gemini_model,
+        model=model,
         contents=_build_prompt(resume_text, job_description),
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -129,12 +126,36 @@ def _generate(resume_text: str, job_description: str | None) -> AnalysisResult:
         raise GeminiResponseError("Gemini returned an invalid analysis. Please try again.") from exc
 
 
+def _generate(resume_text: str, job_description: str | None) -> AnalysisResult:
+    settings = get_settings()
+    if not settings.gemini_api_key:
+        raise GeminiConfigurationError("Gemini is not configured. Add GEMINI_API_KEY to the backend environment.")
+
+    client = genai.Client(
+        api_key=settings.gemini_api_key,
+        http_options=types.HttpOptions(timeout=settings.gemini_timeout_ms),
+    )
+    try:
+        return _generate_with_model(client, settings.gemini_model, resume_text, job_description)
+    except errors.ServerError as exc:
+        fallback_model = settings.gemini_fallback_model
+        if getattr(exc, "code", None) != 503 or not fallback_model or fallback_model == settings.gemini_model:
+            raise
+        logger.warning(
+            "Gemini model %s is unavailable; retrying once with %s",
+            settings.gemini_model,
+            fallback_model,
+        )
+        return _generate_with_model(client, fallback_model, resume_text, job_description)
+
+
 async def analyze_resume(resume_text: str, job_description: str | None) -> AnalysisResult:
     settings = get_settings()
+    model_attempts = 2 if settings.gemini_fallback_model and settings.gemini_fallback_model != settings.gemini_model else 1
     try:
         return await asyncio.wait_for(
             asyncio.to_thread(_generate, resume_text, job_description),
-            timeout=(settings.gemini_timeout_ms / 1000) + 5,
+            timeout=((settings.gemini_timeout_ms / 1000) * model_attempts) + 10,
         )
     except GeminiServiceError:
         raise
