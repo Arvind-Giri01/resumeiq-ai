@@ -7,9 +7,25 @@ from reportlab.pdfgen import canvas
 
 import main
 from models import AnalysisResult
+from services.gemini_service import _response_schema
 
 
 client = TestClient(main.app)
+
+
+def test_gemini_schema_omits_unsupported_additional_properties() -> None:
+    schema = _response_schema()
+
+    def assert_supported(value: object) -> None:
+        if isinstance(value, dict):
+            assert "additionalProperties" not in value
+            for child in value.values():
+                assert_supported(child)
+        elif isinstance(value, list):
+            for child in value:
+                assert_supported(child)
+
+    assert_supported(schema)
 
 
 def make_pdf(text: str) -> bytes:

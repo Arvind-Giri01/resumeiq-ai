@@ -74,6 +74,23 @@ def _strip_markdown_fences(value: str) -> str:
     return cleaned.strip()
 
 
+def _response_schema() -> dict:
+    """Return Gemini-compatible JSON schema while keeping local validation strict."""
+    schema = AnalysisResult.model_json_schema()
+
+    def remove_unsupported_fields(value: object) -> None:
+        if isinstance(value, dict):
+            value.pop("additionalProperties", None)
+            for child in value.values():
+                remove_unsupported_fields(child)
+        elif isinstance(value, list):
+            for child in value:
+                remove_unsupported_fields(child)
+
+    remove_unsupported_fields(schema)
+    return schema
+
+
 def _generate(resume_text: str, job_description: str | None) -> AnalysisResult:
     settings = get_settings()
     if not settings.gemini_api_key:
@@ -88,7 +105,7 @@ def _generate(resume_text: str, job_description: str | None) -> AnalysisResult:
         contents=_build_prompt(resume_text, job_description),
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=AnalysisResult,
+            response_schema=_response_schema(),
             temperature=0.2,
             max_output_tokens=4096,
         ),
@@ -96,6 +113,11 @@ def _generate(resume_text: str, job_description: str | None) -> AnalysisResult:
 
     if isinstance(response.parsed, AnalysisResult):
         return response.parsed
+    if isinstance(response.parsed, dict):
+        try:
+            return AnalysisResult.model_validate(response.parsed)
+        except ValidationError as exc:
+            raise GeminiResponseError("Gemini returned an invalid analysis. Please try again.") from exc
 
     raw_text = response.text or ""
     if not raw_text.strip():
