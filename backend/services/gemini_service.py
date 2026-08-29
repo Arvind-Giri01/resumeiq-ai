@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 
 from google import genai
@@ -9,6 +10,9 @@ from pydantic import ValidationError
 
 from config import get_settings
 from models import AnalysisResult
+
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiServiceError(RuntimeError):
@@ -113,12 +117,23 @@ async def analyze_resume(resume_text: str, job_description: str | None) -> Analy
     except GeminiServiceError:
         raise
     except asyncio.TimeoutError as exc:
+        logger.warning("Gemini request exceeded the application timeout")
         raise GeminiTimeoutError("The analysis took too long. Please try again.") from exc
     except errors.ClientError as exc:
+        logger.warning(
+            "Gemini client error (code=%s): %s",
+            getattr(exc, "code", "unknown"),
+            getattr(exc, "message", str(exc)),
+        )
         if getattr(exc, "code", None) == 429:
             raise GeminiRateLimitError("The AI service is busy. Please wait a moment and try again.") from exc
         raise GeminiServiceError("The AI service rejected the request. Please try again.") from exc
     except errors.ServerError as exc:
+        logger.warning(
+            "Gemini server error (code=%s): %s",
+            getattr(exc, "code", "unknown"),
+            getattr(exc, "message", str(exc)),
+        )
         raise GeminiServiceError("The AI service is temporarily unavailable. Please try again.") from exc
     except TimeoutError as exc:
         raise GeminiTimeoutError("The analysis took too long. Please try again.") from exc
