@@ -4,6 +4,14 @@
 
 ResumeIQ is a full-stack AI resume analyzer that turns a PDF into a practical ATS score, job-match analysis, missing keywords, editing priorities, and resume-specific interview questions.
 
+## Live deployment
+
+- Web app: [resumeiq-ai-arvind.arvind92029.chatgpt.site](https://resumeiq-ai-arvind.arvind92029.chatgpt.site)
+- API health: [resumeiq-api-tury.onrender.com/health](https://resumeiq-api-tury.onrender.com/health)
+- Source: [github.com/Arvind-Giri01/resumeiq-ai](https://github.com/Arvind-Giri01/resumeiq-ai)
+
+The web app is currently access-controlled for its owner. The Render API uses a free instance, so the first request after inactivity can take 50 seconds or more while the service wakes up.
+
 ## What it does
 
 - Accepts drag-and-drop PDF uploads up to 5 MB
@@ -14,6 +22,7 @@ ResumeIQ is a full-stack AI resume analyzer that turns a PDF into a practical AT
 - Finds missing keywords without recommending keyword stuffing
 - Generates evidence-based strengths, editing actions, role gaps, and interview questions
 - Handles AI timeouts, quota limits, malformed output, and service failures without exposing stack traces
+- Falls back to a second stable Gemini model when the primary model reports temporary unavailability
 - Rate-limits public analysis requests and restricts CORS to configured origins
 - Works responsively from 375 px upward and supports reduced-motion preferences
 
@@ -23,7 +32,7 @@ ResumeIQ is a full-stack AI resume analyzer that turns a PDF into a practical AT
 PDF → FastAPI validation + pypdf extraction → Gemini structured output → Pydantic validation → React results UI
 ```
 
-The backend uses Gemini's JSON schema mode and validates the response a second time with Pydantic. `ats_score` must equal the sum of the four category scores, and any malformed or inconsistent response is rejected before it reaches the browser.
+The backend uses Gemini's JSON schema mode and validates the response a second time with Pydantic. `ats_score` must equal the sum of the four category scores, and any malformed or inconsistent response is rejected before it reaches the browser. If the primary Gemini model returns a transient `503`, the backend retries once through a configured stable fallback model.
 
 ## Stack
 
@@ -109,18 +118,18 @@ Push the repository to GitHub, then create a Blueprint from the root `render.yam
 - `GEMINI_API_KEY`: your Google AI Studio key
 - `CORS_ORIGINS`: the deployed frontend URL, without a trailing slash
 
-The Blueprint sets the correct root directory, Python version, start command, health check, model, and rate limit. After deployment, confirm that `https://YOUR-SERVICE.onrender.com/health` returns `{"status":"ok","ai_configured":true}`.
+The Blueprint sets the correct root directory, Python version, start command, health check, primary and fallback models, and rate limit. The production health endpoint at [resumeiq-api-tury.onrender.com/health](https://resumeiq-api-tury.onrender.com/health) returns `{"status":"ok","ai_configured":true}`.
 
 ### Frontend
 
-Set these production values before publishing:
+The hosted frontend uses these production values:
 
 ```env
-RESUMEIQ_API_URL=https://YOUR-SERVICE.onrender.com
-SITE_URL=https://YOUR-FRONTEND-DOMAIN
+RESUMEIQ_API_URL=https://resumeiq-api-tury.onrender.com
+SITE_URL=https://resumeiq-ai-arvind.arvind92029.chatgpt.site
 ```
 
-The frontend includes `.openai/hosting.json` and is ready for publishing through OpenAI Sites. If the domain changes, update `CORS_ORIGINS` on Render and redeploy the backend.
+The frontend is deployed through OpenAI Sites. If the domain changes, update `CORS_ORIGINS` on Render and redeploy the backend.
 
 ## Security and privacy notes
 
@@ -141,7 +150,7 @@ The frontend includes `.openai/hosting.json` and is ready for publishing through
 
 ## Portfolio-ready summary
 
-Once the live links are available, a concise resume entry could read:
+A concise resume entry could read:
 
 > **ResumeIQ** — Python, FastAPI, React, Gemini API  
 > Built a full-stack resume analyzer that extracts text from PDFs and returns schema-validated ATS scoring, job-match gaps, and tailored interview questions. Added strict upload validation, Pydantic-enforced LLM output, rate limiting, CORS controls, and graceful handling for malformed responses, timeouts, and API quota failures.
