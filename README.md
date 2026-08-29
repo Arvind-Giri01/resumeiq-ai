@@ -78,7 +78,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. The example frontend environment already points to the local API.
+Open `http://localhost:3000`. The example frontend environment already points to the local API. Browser requests go through same-origin server routes, so the backend URL is never baked into the client bundle.
 
 ## Tests and production build
 
@@ -116,8 +116,8 @@ The Blueprint sets the correct root directory, Python version, start command, he
 Set these production values before publishing:
 
 ```env
-NEXT_PUBLIC_API_URL=https://YOUR-SERVICE.onrender.com
-NEXT_PUBLIC_SITE_URL=https://YOUR-FRONTEND-DOMAIN
+RESUMEIQ_API_URL=https://YOUR-SERVICE.onrender.com
+SITE_URL=https://YOUR-FRONTEND-DOMAIN
 ```
 
 The frontend includes `.openai/hosting.json` and is ready for publishing through OpenAI Sites. If the domain changes, update `CORS_ORIGINS` on Render and redeploy the backend.

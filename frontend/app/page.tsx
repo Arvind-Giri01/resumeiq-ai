@@ -22,7 +22,6 @@ type AnalysisResult = {
 
 type LoadingStep = 'extracting' | 'analyzing' | null;
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const formatBytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
@@ -288,12 +287,12 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const uploadResponse = await fetch(`${API_URL}/upload`, { method: 'POST', body: formData });
+      const uploadResponse = await fetch('/api/upload', { method: 'POST', body: formData });
       if (!uploadResponse.ok) throw new Error(await errorMessage(uploadResponse, 'The PDF could not be read.'));
       const upload = await uploadResponse.json();
 
       setLoading('analyzing');
-      const analysisResponse = await fetch(`${API_URL}/analyze`, {
+      const analysisResponse = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resume_text: upload.text, job_description: jobDescription.trim() || null }),
