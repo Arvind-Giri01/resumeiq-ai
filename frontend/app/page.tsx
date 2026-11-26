@@ -22,6 +22,17 @@ type AnalysisResult = {
 
 type LoadingStep = 'extracting' | 'analyzing' | null;
 
+const sampleReport: AnalysisResult = {
+  ats_score: 78,
+  score_breakdown: { formatting: 22, keywords: 17, experience: 20, skills: 19 },
+  missing_keywords: ['Integration testing', 'Accessibility'],
+  strengths: ['A clear projects section makes React and REST API experience easy to find.', 'The resume names the technologies used in each project.'],
+  improvements: ['Add a measured result to one project, such as the time saved or the number of users supported.', 'Describe how you tested a key interaction and what you fixed after testing.'],
+  jd_match_percentage: 72,
+  jd_gap_analysis: ['The role asks for integration tests. The example resume mentions manual testing only.', 'The role lists accessible interfaces. Include an example if you have relevant experience.'],
+  interview_questions: ['How did you diagnose a frontend error caused by an API response?', 'What would you test first in the resume upload workflow?'],
+};
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const formatBytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
@@ -36,7 +47,10 @@ const scoreCopy = (score: number) => {
 async function errorMessage(response: Response, fallback: string) {
   try {
     const body = await response.json();
-    return typeof body.detail === 'string' ? body.detail : fallback;
+    if (body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string') {
+      return body.detail;
+    }
+    return fallback;
   } catch {
     return fallback;
   }
@@ -46,7 +60,7 @@ function Logo() {
   return (
     <a className="flex items-center gap-2.5 font-semibold tracking-[-0.02em]" href="#top" aria-label="ResumeIQ home">
       <span className="grid size-9 place-items-center rounded-xl bg-[#174c35] text-sm font-bold text-white shadow-[0_6px_18px_rgba(23,76,53,.22)]">RQ</span>
-      <span className="text-lg">ResumeIQ</span>
+      <span className="text-lg">ResumeIQ <span className="text-[#26704b]">AI</span></span>
     </a>
   );
 }
@@ -114,20 +128,20 @@ function Breakdown({ scores }: { scores: ScoreBreakdown }) {
   );
 }
 
-function Results({ result, onReset }: { result: AnalysisResult; onReset: () => void }) {
+function Results({ result, onReset, sample }: { result: AnalysisResult; onReset: () => void; sample: boolean }) {
   return (
-    <main className="min-h-screen bg-[#f6f8f4] text-[#17251d]">
-      <header className="sticky top-0 z-20 border-b border-[#dfe8e0]/90 bg-[#f6f8f4]/90 backdrop-blur-xl">
+    <main className="min-h-screen bg-[#f3f5f4] text-[#17251d]">
+      <header className="sticky top-0 z-20 border-b border-[#dfe8e0]/90 bg-[#f3f5f4]/90 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
           <Logo />
-          <button onClick={onReset} className="rounded-full border border-[#cad8cd] bg-white px-4 py-2 text-sm font-semibold text-[#28543b] transition hover:border-[#78a087] hover:bg-[#f3f8f3]">Analyze another</button>
+          <button onClick={onReset} className="rounded-full border border-[#cad8cd] bg-white px-4 py-2 text-sm font-semibold text-[#28543b] transition hover:border-[#78a087] hover:bg-[#f3f8f3]">{sample ? 'Back to analyzer' : 'Analyze another'}</button>
         </div>
       </header>
 
       <div className="mx-auto w-full max-w-7xl px-5 pb-20 pt-10 sm:px-8 lg:px-10 lg:pt-14">
         <div className="mb-9 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[.17em] text-[#70877a]">Your resume analysis</p>
+            <p className="text-xs font-semibold uppercase tracking-[.17em] text-[#70877a]">{sample ? 'Sample report' : 'Your resume analysis'}</p>
             <h1 className="mt-2 max-w-3xl text-balance text-4xl font-semibold tracking-[-.055em] text-[#153c2b] sm:text-5xl">A clearer path to your next interview.</h1>
           </div>
           <p className="max-w-xs text-sm leading-6 text-[#71867a]">Use this as a focused editing plan. Start with the highest-impact improvements, then recheck.</p>
@@ -240,8 +254,8 @@ function Results({ result, onReset }: { result: AnalysisResult; onReset: () => v
         </section>
 
         <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-3xl border border-[#dbe5dc] bg-[#edf4ee] px-6 py-6 text-center sm:flex-row sm:text-left">
-          <div><strong className="block text-[#244d37]">Ready for another pass?</strong><span className="mt-1 block text-sm text-[#6e8376]">Make your edits, export a fresh PDF, and see how the score changes.</span></div>
-          <button onClick={onReset} className="shrink-0 rounded-xl bg-[#174c35] px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_22px_rgba(23,76,53,.18)] transition hover:-translate-y-0.5 hover:bg-[#103e2b]">Analyze another resume</button>
+          <div><strong className="block text-[#244d37]">{sample ? 'Ready to review your own resume?' : 'Ready for another pass?'}</strong><span className="mt-1 block text-sm text-[#6e8376]">{sample ? 'Upload a PDF to get a report based on your experience.' : 'Make your edits, export a fresh PDF, and see how the score changes.'}</span></div>
+          <button onClick={onReset} className="shrink-0 rounded-xl bg-[#174c35] px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_22px_rgba(23,76,53,.18)] transition hover:-translate-y-0.5 hover:bg-[#103e2b]">{sample ? 'Back to analyzer' : 'Analyze another resume'}</button>
         </div>
       </div>
     </main>
@@ -255,14 +269,20 @@ export default function Home() {
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState<LoadingStep>(null);
   const [error, setError] = useState('');
+  const [showSample, setShowSample] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
   const selectFile = (selected: File | undefined) => {
     setError('');
     if (!selected) return;
-    if (selected.type !== 'application/pdf' || !selected.name.toLowerCase().endsWith('.pdf')) {
+    if (!selected.name.toLowerCase().endsWith('.pdf') || (selected.type && selected.type !== 'application/pdf')) {
       setFile(null);
       setError('Please choose a PDF file. DOCX and image files are not supported yet.');
+      return;
+    }
+    if (selected.size === 0) {
+      setFile(null);
+      setError('That PDF is empty. Choose a PDF with selectable text.');
       return;
     }
     if (selected.size > MAX_FILE_SIZE) {
@@ -273,7 +293,10 @@ export default function Home() {
     setFile(selected);
   };
 
-  const onFileChange = (event: ChangeEvent<HTMLInputElement>) => selectFile(event.target.files?.[0]);
+  const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    selectFile(event.target.files?.[0]);
+    event.target.value = '';
+  };
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragging(false);
@@ -290,6 +313,9 @@ export default function Home() {
       const uploadResponse = await fetch('/api/upload', { method: 'POST', body: formData });
       if (!uploadResponse.ok) throw new Error(await errorMessage(uploadResponse, 'The PDF could not be read.'));
       const upload = await uploadResponse.json();
+      if (!upload || typeof upload !== 'object' || !('text' in upload) || typeof upload.text !== 'string') {
+        throw new Error('The analysis service returned an unreadable PDF response. Please try again.');
+      }
 
       setLoading('analyzing');
       const analysisResponse = await fetch('/api/analyze', {
@@ -298,7 +324,7 @@ export default function Home() {
         body: JSON.stringify({ resume_text: upload.text, job_description: jobDescription.trim() || null }),
       });
       if (!analysisResponse.ok) throw new Error(await errorMessage(analysisResponse, 'The analysis could not be completed.'));
-      setResult(await analysisResponse.json());
+      setResult(await analysisResponse.json() as AnalysisResult);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'Something went wrong. Please try again.';
@@ -317,58 +343,61 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (result) return <Results result={result} onReset={reset} />;
+  if (showSample) {
+    return <Results result={sampleReport} sample onReset={() => {
+      setShowSample(false);
+      window.scrollTo(0, 0);
+    }} />;
+  }
+  if (result) return <Results result={result} sample={false} onReset={reset} />;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f6f8f4] text-[#17251d]">
+    <main className="relative min-h-screen overflow-hidden bg-[#f3f5f4] text-[#17251d]">
       <div className="page-grid pointer-events-none absolute inset-0 opacity-45" />
       <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
         <Logo />
-        <span className="rounded-full border border-[#d8e2d9] bg-white/70 px-3 py-1.5 text-xs font-medium text-[#527060] backdrop-blur">AI-powered resume review</span>
+        <span className="rounded-full border border-[#d8e2d9] bg-white/70 px-3 py-1.5 text-xs font-medium text-[#527060] backdrop-blur">PDF resume review</span>
       </header>
 
       <section id="top" className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-12 px-5 pb-16 pt-7 sm:px-8 lg:grid-cols-[.88fr_1.12fr] lg:px-10 lg:pb-24 lg:pt-14">
-        <div className="max-w-xl">
-          <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d9e7dc] bg-[#eef5ef] px-3 py-1.5 text-xs font-semibold uppercase tracking-[.14em] text-[#2f684c]">
-            <span className="size-1.5 rounded-full bg-[#f0a63b]" /> Built for the next application
-          </p>
-          <h1 className="text-balance text-[clamp(3.3rem,7vw,6.5rem)] font-semibold leading-[.88] tracking-[-.075em] text-[#153c2b]">Make every word earn its place.</h1>
-          <p className="mt-7 max-w-lg text-balance text-base leading-7 text-[#5a7164] sm:text-lg">Get a clear ATS score, find the keywords you missed, and turn your experience into a stronger interview story.</p>
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#476354]">
-            {['Private by design', 'PDF up to 5 MB', 'Actionable results'].map((item) => (
-              <span key={item} className="flex items-center gap-2"><span className="grid size-5 place-items-center rounded-full bg-[#dcebdd] text-[10px] font-bold text-[#236442]">✓</span>{item}</span>
-            ))}
-          </div>
-          <div className="mt-10 hidden max-w-md grid-cols-3 gap-3 lg:grid">
-            {[['01', 'Upload'], ['02', 'Compare'], ['03', 'Improve']].map(([number, label]) => (
-              <div key={label} className="border-t border-[#cddbd0] pt-3"><span className="font-mono text-[10px] text-[#8ba095]">{number}</span><strong className="ml-2 text-xs text-[#506a5b]">{label}</strong></div>
-            ))}
+        <div className="hero-panel">
+          <p className="hero-label">AI resume analyzer</p>
+          <h1>Make every word <em>earn its place.</em></h1>
+          <p className="hero-copy">See how your resume reads to an applicant tracking system. Find the missing keywords, compare it with a job description, and get a practical editing plan.</p>
+          <div className="hero-actions">
+            <button type="button" disabled={Boolean(loading)} onClick={() => {
+              setShowSample(true);
+              window.scrollTo(0, 0);
+            }}>View sample report</button>
+            <span> No upload required</span>
           </div>
         </div>
 
         <div className="relative">
           <div className="absolute -inset-6 -z-10 rotate-2 rounded-[2.5rem] bg-[#dfeadf]/65" />
-          <div className="min-h-[590px] rounded-[2rem] border border-white/80 bg-white p-5 shadow-[0_28px_80px_rgba(36,68,49,.12)] sm:p-7">
+          <div className="min-h-[520px] rounded-[2rem] border border-white/80 bg-white p-5 shadow-[0_28px_80px_rgba(36,68,49,.12)] sm:p-7">
             {loading ? <LoadingState step={loading} fileName={file?.name || 'your PDF'} /> : (
               <>
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <div><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#7c9486]">New analysis</p><h2 className="mt-1.5 text-2xl font-semibold tracking-[-.035em]">Upload your resume</h2></div>
-                  <span className="rounded-full bg-[#fff3df] px-3 py-1.5 text-xs font-semibold text-[#9a6420]">Free analysis</span>
                 </div>
 
+                <input ref={inputRef} hidden type="file" accept="application/pdf,.pdf" onChange={onFileChange} />
                 <div
                   onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
                   onDragOver={(event) => event.preventDefault()}
-                  onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }}
+                  onDragLeave={(event) => { if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) setDragging(false); }}
                   onDrop={onDrop}
                   onClick={() => inputRef.current?.click()}
-                  onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') inputRef.current?.click(); }}
+                  onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      inputRef.current?.click();
+                    } }}
                   role="button"
                   tabIndex={0}
                   aria-label="Choose a PDF resume"
                   className={`flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-[1.4rem] border border-dashed px-6 text-center outline-none transition focus:ring-4 focus:ring-[#dceadf] ${dragging ? 'scale-[1.01] border-[#2e7753] bg-[#edf6ee]' : file ? 'border-[#7ba38a] bg-[#f2f7f1]' : 'border-[#a9beb0] bg-[#f7faf6] hover:border-[#367657] hover:bg-[#f2f7f1]'}`}
                 >
-                  <input ref={inputRef} className="sr-only" type="file" accept="application/pdf,.pdf" onChange={onFileChange} />
                   {file ? (
                     <>
                       <span className="mb-3 grid size-14 place-items-center rounded-2xl bg-[#dcebdd] text-2xl text-[#236442]">✓</span>
@@ -391,14 +420,14 @@ export default function Home() {
 
                 {error && <div className="mt-4 flex gap-3 rounded-xl border border-[#f1cfc8] bg-[#fff4f1] px-4 py-3 text-sm leading-5 text-[#9a4b3c]" role="alert"><span aria-hidden="true">!</span><span>{error}</span></div>}
 
-                <button disabled={!file} onClick={analyze} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#174c35] px-5 py-4 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(23,76,53,.22)] transition hover:-translate-y-0.5 hover:bg-[#0f3f2b] disabled:cursor-not-allowed disabled:bg-[#a9b7ad] disabled:shadow-none disabled:hover:translate-y-0" type="button">Analyze my resume <span aria-hidden="true">→</span></button>
+                <button disabled={!file} onClick={analyze} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#174c35] px-5 py-4 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(23,76,53,.22)] transition hover:-translate-y-0.5 hover:bg-[#0f3f2b] disabled:cursor-not-allowed disabled:bg-[#a9b7ad] disabled:shadow-none disabled:hover:translate-y-0" type="button">Analyze resume</button>
               </>
             )}
           </div>
         </div>
       </section>
 
-      <footer className="relative z-10 border-t border-[#e0e7e1] px-5 py-5 text-center text-xs text-[#819187]">ResumeIQ gives editorial guidance, not hiring guarantees. Always review suggestions before updating your resume.</footer>
+      <footer className="relative z-10 border-t border-[#e0e7e1] px-5 py-5 text-center text-xs text-[#819187]">Resume text is sent to Gemini for analysis. ResumeIQ does not store uploaded PDFs.</footer>
     </main>
   );
 }

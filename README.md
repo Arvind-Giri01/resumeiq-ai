@@ -14,6 +14,7 @@ The web app is currently access-controlled for its owner. The Render API uses a 
 
 ## What it does
 
+- Includes a sample report you can explore without uploading a resume
 - Accepts drag-and-drop PDF uploads up to 5 MB
 - Rejects non-PDF, oversized, damaged, encrypted, image-only, and unusually long documents with readable errors
 - Extracts text without storing the uploaded resume

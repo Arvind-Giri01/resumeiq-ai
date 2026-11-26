@@ -46,3 +46,64 @@ button:focus-visible, summary:focus-visible { outline: 3px solid #b9d6c1; outlin
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+.hero-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 2rem;
+  padding: clamp(1.75rem, 4vw, 3.25rem);
+  color: #f4fcfa;
+  background: radial-gradient(ellipse at 96% 8%, #275e62 0, transparent 53%),
+    radial-gradient(ellipse at 100% 110%, #274c70 0, transparent 55%), #102d2b;
+  box-shadow: 0 24px 64px #133a3126;
+}
+
+.hero-label {
+  color: #acedd6;
+  font-size: .875rem;
+  font-weight: 650;
+}
+
+.hero-panel h1 {
+  margin: 1.25rem 0;
+  max-width: 10ch;
+  font-size: clamp(2.75rem, 5.5vw, 5.4rem);
+  font-weight: 650;
+  letter-spacing: -.074em;
+  line-height: .99;
+}
+
+.hero-panel h1 em {
+  color: #a8efd3;
+  font-style: normal;
+}
+
+.hero-copy {
+  max-width: 34ch;
+  color: #d3e5e2;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: 1.75rem;
+  color: #d3e5e2;
+  font-size: .875rem;
+}
+
+.hero-actions button {
+  border: 1px solid #a5d4c580;
+  border-radius: .85rem;
+  padding: .7rem 1rem;
+  color: #f4fcfa;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.hero-actions button:hover { background: #ffffff18; }
+.hero-actions button:disabled { cursor: wait; opacity: .55; }
