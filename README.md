@@ -6,11 +6,11 @@ ResumeIQ is a full-stack AI resume analyzer that turns a PDF into a practical AT
 
 ## Live deployment
 
-- Web app: [resumeiq-ai-arvind.arvind92029.chatgpt.site](https://resumeiq-ai-arvind.arvind92029.chatgpt.site)
+- Web app: [resumeiq-ai-arvind.onrender.com](https://resumeiq-ai-arvind.onrender.com)
 - API health: [resumeiq-api-tury.onrender.com/health](https://resumeiq-api-tury.onrender.com/health)
 - Source: [github.com/Arvind-Giri01/resumeiq-ai](https://github.com/Arvind-Giri01/resumeiq-ai)
 
-The web app is currently access-controlled for its owner. The Render API uses a free instance, so the first request after inactivity can take 50 seconds or more while the service wakes up.
+The web app opens without sign-in. The Render API uses a free instance, so the first request after inactivity can take 50 seconds or more while the service wakes up.
 
 ## What it does
 
@@ -40,7 +40,7 @@ The backend uses Gemini's JSON schema mode and validates the response a second t
 - Frontend: React 19, Vinext/Vite, Tailwind CSS 4, TypeScript
 - Backend: Python 3.12, FastAPI, pypdf, Pydantic, SlowAPI
 - AI: Google GenAI SDK with Gemini structured output
-- Hosting: OpenAI Sites-compatible frontend and Render Blueprint-ready backend
+- Hosting: Render Static Site frontend and Render FastAPI backend
 - Testing: Pytest, FastAPI TestClient, ReportLab test fixtures
 
 ## Run locally
@@ -123,14 +123,7 @@ The Blueprint sets the correct root directory, Python version, start command, he
 
 ### Frontend
 
-The hosted frontend uses these production values:
-
-```env
-RESUMEIQ_API_URL=https://resumeiq-api-tury.onrender.com
-SITE_URL=https://resumeiq-ai-arvind.arvind92029.chatgpt.site
-```
-
-The frontend is deployed through OpenAI Sites. If the domain changes, update `CORS_ORIGINS` on Render and redeploy the backend.
+The public frontend is a Render Static Site. Build it from the repository root with `cd frontend && npm ci --include=dev && ./node_modules/.bin/vite build --config vite.render.config.ts`, and publish `frontend/dist`. Set `VITE_RESUMEIQ_API_URL` to the Render API origin at build time, and set `PUBLIC_FRONTEND_ORIGIN` on the API to the exact frontend origin so the browser can access the API.
 
 ## Security and privacy notes
 

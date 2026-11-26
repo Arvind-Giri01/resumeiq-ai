@@ -17,11 +17,13 @@ class Settings:
     gemini_fallback_model: str = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.6-flash").strip()
     gemini_timeout_ms: int = int(os.getenv("GEMINI_TIMEOUT_MS", "45000"))
     cors_origins_raw: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173")
+    public_frontend_origin: str = os.getenv("PUBLIC_FRONTEND_ORIGIN", "")
     rate_limit: str = os.getenv("ANALYZE_RATE_LIMIT", "5/minute")
 
     @property
     def cors_origins(self) -> list[str]:
-        return [origin.strip().rstrip("/") for origin in self.cors_origins_raw.split(",") if origin.strip()]
+        origins = [*self.cors_origins_raw.split(","), self.public_frontend_origin]
+        return [origin.strip().rstrip("/") for origin in origins if origin.strip()]
 
 
 @lru_cache
